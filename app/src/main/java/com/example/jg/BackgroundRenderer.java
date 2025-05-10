@@ -4,11 +4,13 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Rect;
 
 public class BackgroundRenderer {
     private Bitmap backgroundImage;
     private final Context context;
+    private Paint backgroundPaint;
 
     public BackgroundRenderer(Context context) {
         this.context = context;
@@ -18,6 +20,7 @@ public class BackgroundRenderer {
     private void loadBackground() {
         backgroundImage = BitmapFactory.decodeResource(context.getResources(), R.drawable.fon);
     }
+
 
     public void draw(Canvas canvas, float worldWidth, float worldHeight) {
         if (backgroundImage != null) {

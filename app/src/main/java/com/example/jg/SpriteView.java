@@ -6,6 +6,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -14,9 +16,14 @@ import android.animation.ValueAnimator;
 import android.animation.AnimatorSet;
 import android.app.Activity;
 import android.content.SharedPreferences;
+import java.util.ArrayList;
+import java.util.Random;
+import android.os.Handler;
+import android.os.Looper;
 
 public class SpriteView extends View implements ViewTransform.OnTransformListener {
     private Bitmap spriteSheet;
+    private Bitmap boxImage;
     private int spriteWidth;
     private int spriteHeight;
     private int currentFrame = 0;
@@ -32,6 +39,10 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
     private Matrix transformMatrix;
     private BackgroundRenderer backgroundRenderer;
     private ViewTransform viewTransform;
+    private ArrayList<Box> boxes;
+    private int score = 0;
+    private Paint scorePaint;
+    private Random random;
     
     // Скорость персонажа в пикселях
     private static final float CHARACTER_SPEED = 300f;
@@ -50,31 +61,31 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
     private boolean canDash = true;
     private int touchCount = 0;
 
-    public SpriteView(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        init();
+    private SettingsFragment settingsFragment;
+
+    public void setSettingsFragment(SettingsFragment fragment) {
+        this.settingsFragment = fragment;
     }
 
-    private void init() {
-        // Загрузка раскадровки
-        spriteSheet = BitmapFactory.decodeResource(getResources(), R.drawable.sprites);
-        spriteWidth = spriteSheet.getWidth() / 3;
-        spriteHeight = spriteSheet.getHeight() / 3;
-        
-        // Инициализация поля
-        backgroundRenderer = new BackgroundRenderer(getContext());
-        
-        // Инициализация передвижения камеры
-        viewTransform = new ViewTransform(getContext(), this);
-        
-        transformMatrix = new Matrix();
+    private void spawnNewBox() {
+        float x = random.nextFloat() * (worldWidth - boxImage.getWidth());
+        float y = random.nextFloat() * (worldHeight - boxImage.getHeight());
+        boxes.add(new Box(x, y, boxImage));
+    }
 
-        // Анимация
-        setupAnimations();
+    private void checkBoxCollisions() {
+        ArrayList<Box> boxesCopy = new ArrayList<>(boxes);
+        for (Box box : boxesCopy) {
+            if (!box.isCollected() && box.isColliding(currentX, currentY, spriteWidth, spriteHeight)) {
+                box.collect();
+                score += 10;
+                spawnNewBox();
+                invalidate();
+            }
+        }
     }
 
     private void setupAnimations() {
-        // для движения
         moveAnimator = ValueAnimator.ofFloat(0f, 1f);
         moveAnimator.setInterpolator(new LinearInterpolator());
         moveAnimator.addUpdateListener(animation -> {
@@ -82,7 +93,6 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
             float newX = currentX + (targetX - currentX) * fraction;
             float newY = currentY + (targetY - currentY) * fraction;
             
-            // "прикосновение" к точке касания
             float dx = targetX - newX;
             float dy = targetY - newY;
             float distance = (float) Math.sqrt(dx * dx + dy * dy);
@@ -94,11 +104,11 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
             } else {
                 currentX = newX;
                 currentY = newY;
+                checkBoxCollisions();
             }
             invalidate();
         });
 
-        // анимация (первый кадр пропускаем)
         frameAnimator = ValueAnimator.ofInt(1, totalFrames - 1);
         frameAnimator.setDuration(500);
         frameAnimator.setRepeatCount(ValueAnimator.INFINITE);
@@ -112,14 +122,17 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         isMoving = false;
         touchCount = 0;
         currentFrame = 0;
-        frameAnimator.cancel();
-        moveAnimator.cancel();
+        if (frameAnimator.isRunning()) {
+            frameAnimator.cancel();
+        }
+        if (moveAnimator.isRunning()) {
+            moveAnimator.cancel();
+        }
         invalidate();
     }
 
     private void startMovement() {
         if (isMoving) {
-            // Деш на 2-е касание
             if (touchCount == 1) {
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastDashTime >= DASH_COOLDOWN) {
@@ -132,12 +145,9 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
 
                     moveAnimator.cancel();
                     
-                    // считаем дистанцию до цели
                     float dx = targetX - currentX;
                     float dy = targetY - currentY;
                     float distance = (float) Math.sqrt(dx * dx + dy * dy);
-                    
-                    // Счет времени на анимацию
                     long duration = (long) (distance / DASH_SPEED * 1000);
                     moveAnimator.setDuration(duration);
 
@@ -146,7 +156,6 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
                         frameAnimator.start();
                     }
                     
-                    // по новой
                     moveAnimator.start();
                 }
             }
@@ -157,51 +166,76 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         isMoving = true;
         touchCount = 1;
         
+        if (moveAnimator.isRunning()) {
+            moveAnimator.cancel();
+        }
+        if (frameAnimator.isRunning()) {
+            frameAnimator.cancel();
+        }
 
         float dx = targetX - currentX;
         float dy = targetY - currentY;
         float distance = (float) Math.sqrt(dx * dx + dy * dy);
-        
-
         long duration = (long) (distance / CHARACTER_SPEED * 1000);
         moveAnimator.setDuration(duration);
         
-        if (!frameAnimator.isRunning()) {
-            currentFrame = 1;
-            frameAnimator.start();
-        }
-        
+        currentFrame = 1;
+        frameAnimator.start();
         moveAnimator.start();
     }
 
     @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        super.onSizeChanged(w, h, oldw, oldh);
-        screenWidth = w;
-        screenHeight = h;
-
-        SharedPreferences settings = getContext().getSharedPreferences("GameSettings", 0);
-        int worldSize = settings.getInt("worldSize", DEFAULT_WORLD_SIZE);
+    public boolean onTouchEvent(MotionEvent event) {
+        viewTransform.onTouchEvent(event);
         
-        worldWidth = w * worldSize;
-        worldHeight = h * worldSize;
+        if (event.getAction() == MotionEvent.ACTION_DOWN && !viewTransform.isScaling()) {
+            if (isMoving && touchCount >= 2) {
+                return true;
+            }
 
-        // центруем персонажа
-        currentX = (worldWidth - spriteWidth) / 2;
-        currentY = (worldHeight - spriteHeight) / 2;
-        targetX = currentX;
-        targetY = currentY;
+            float touchX = event.getX();
+            float touchY = event.getY();
+            float scale = viewTransform.getScaleFactor();
+            float translateX = viewTransform.getTranslateX();
+            float translateY = viewTransform.getTranslateY();
+            float focusX = viewTransform.getFocusX();
+            float focusY = viewTransform.getFocusY();
+
+            float worldX = (touchX - translateX - focusX) / scale + focusX;
+            float worldY = (touchY - translateY - focusY) / scale + focusY;
+
+            float charCenterX = currentX + spriteWidth / 2;
+            float charCenterY = currentY + spriteHeight / 2;
+            float dx = worldX - charCenterX;
+            float dy = worldY - charCenterY;
+            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > spriteWidth) {
+                isFacingRight = worldX > charCenterX;
+
+                targetX = worldX - spriteWidth / 2;
+                targetY = worldY - spriteHeight / 2;
+
+                targetX = Math.max(0, Math.min(targetX, worldWidth - spriteWidth));
+                targetY = Math.max(0, Math.min(targetY, worldHeight - spriteHeight));
+
+                if (isMoving) {
+                    stopMovement();
+                }
+                
+                startMovement();
+                return true;
+            }
+        }
         
-        // центруем камеру
-        float scale = viewTransform.getScaleFactor();
-        float centerX = (screenWidth / 2) - (currentX * scale);
-        float centerY = (screenHeight / 2) - (currentY * scale);
-        viewTransform.centerOn(centerX, centerY);
+        return super.onTouchEvent(event);
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
+        canvas.drawColor(0xFF2D1B4D);
 
         canvas.save();
 
@@ -214,13 +248,14 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         canvas.translate(translateX, translateY);
         canvas.scale(scale, scale, focusX, focusY);
         
-        // рисуем землю (да, в классе персонажа...)
         backgroundRenderer.draw(canvas, worldWidth, worldHeight);
         
-        // границы мира
+        for (Box box : boxes) {
+            box.draw(canvas);
+        }
+        
         if (currentX < 0 || currentX > worldWidth - spriteWidth ||
             currentY < 0 || currentY > worldHeight - spriteHeight) {
-            // просто надо
             if (getContext() instanceof Activity) {
                 ((Activity) getContext()).finish();
             }
@@ -244,7 +279,6 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         );
 
         canvas.save();
-        
 
         if (!isFacingRight) {
             transformMatrix.reset();
@@ -252,69 +286,53 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
             canvas.concat(transformMatrix);
         }
 
-        // Рисуем кадр
         canvas.drawBitmap(spriteSheet, src, dst, null);
         
-        // восстановление
         canvas.restore();
+        canvas.restore();
+
+        canvas.drawText("Score: " + score, 50, 50, scorePaint);
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        // обработка свайпов
-        viewTransform.onTouchEvent(event);
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        screenWidth = w;
+        screenHeight = h;
+
+        SharedPreferences settings = getContext().getSharedPreferences("GameSettings", 0);
+        int worldSize = settings.getInt("worldSize", DEFAULT_WORLD_SIZE);
         
-        // движение только если не свайп
-        if (event.getAction() == MotionEvent.ACTION_DOWN && !viewTransform.isScaling()) {
-            // не работает :(
-            if (isMoving && touchCount >= 2) {
-                return true;
-            }
-            
+        worldWidth = w * worldSize;
+        worldHeight = h * worldSize;
 
-            float touchX = event.getX();
-            float touchY = event.getY();
-            
-            // конвертируем в мирвые  координаты
-            float scale = viewTransform.getScaleFactor();
-            float translateX = viewTransform.getTranslateX();
-            float translateY = viewTransform.getTranslateY();
-            
+        currentX = (worldWidth - spriteWidth) / 2;
+        currentY = (worldHeight - spriteHeight) / 2;
+        targetX = currentX;
+        targetY = currentY;
+        
+        viewTransform.setScreenSize(w, h);
+        
+        float scale = viewTransform.getScaleFactor();
+        float centerX = (screenWidth / 2) - (currentX * scale);
+        float centerY = (screenHeight / 2) - (currentY * scale);
+        viewTransform.centerOn(centerX, centerY);
 
-            float worldX = (touchX - translateX) / scale;
-            float worldY = (touchY - translateY) / scale;
-            
+        generateInitialBoxes();
+    }
 
-            float charCenterX = currentX + spriteWidth / 2;
-            float charCenterY = currentY + spriteHeight / 2;
-            float dx = worldX - charCenterX;
-            float dy = worldY - charCenterY;
-            float distance = (float) Math.sqrt(dx * dx + dy * dy);
-            
-            // если прикосновение не в хитбоксе
-            if (distance > spriteWidth) {
-
-                isFacingRight = worldX > charCenterX;
-                
-
-                targetX = worldX - spriteWidth / 2;
-                targetY = worldY - spriteHeight / 2;
-                
-
-                targetX = Math.max(0, Math.min(targetX, worldWidth - spriteWidth));
-                targetY = Math.max(0, Math.min(targetY, worldHeight - spriteHeight));
-                
-
-                startMovement();
-                return true;
-            }
+    private void generateInitialBoxes() {
+        boxes.clear();
+        SharedPreferences settings = getContext().getSharedPreferences("GameSettings", 0);
+        int worldSize = settings.getInt("worldSize", DEFAULT_WORLD_SIZE);
+        
+        int initialBoxCount = worldSize * 2;
+        
+        for (int i = 0; i < initialBoxCount; i++) {
+            float x = random.nextFloat() * (worldWidth - boxImage.getWidth());
+            float y = random.nextFloat() * (worldHeight - boxImage.getHeight());
+            boxes.add(new Box(x, y, boxImage));
         }
-        
-        return super.onTouchEvent(event);
-    }
-
-    @Override
-    public void onTransformChanged() {
         invalidate();
     }
 
@@ -330,8 +348,46 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         if (spriteSheet != null) {
             spriteSheet.recycle();
         }
+        if (boxImage != null) {
+            boxImage.recycle();
+        }
         if (backgroundRenderer != null) {
             backgroundRenderer.cleanup();
         }
+    }
+
+    public SpriteView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        init();
+    }
+
+    private void init() {
+        spriteSheet = BitmapFactory.decodeResource(getResources(), R.drawable.sprites);
+        boxImage = BitmapFactory.decodeResource(getResources(), R.drawable.box);
+        boxImage = Bitmap.createScaledBitmap(boxImage, 
+            boxImage.getWidth() / 4, 
+            boxImage.getHeight() / 4, 
+            true);
+        spriteWidth = spriteSheet.getWidth() / 3;
+        spriteHeight = spriteSheet.getHeight() / 3;
+        
+        backgroundRenderer = new BackgroundRenderer(getContext());
+        viewTransform = new ViewTransform(getContext(), this);
+        transformMatrix = new Matrix();
+        random = new Random();
+        boxes = new ArrayList<>();
+        
+        scorePaint = new Paint();
+        scorePaint.setColor(0xFFFFFFFF);
+        scorePaint.setTextSize(75);
+        scorePaint.setTypeface(Typeface.DEFAULT_BOLD);
+        scorePaint.setAntiAlias(true);
+
+        setupAnimations();
+    }
+
+    @Override
+    public void onTransformChanged() {
+        invalidate();
     }
 } 

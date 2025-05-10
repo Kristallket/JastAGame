@@ -4,13 +4,15 @@ import android.content.Context;
 import android.view.MotionEvent;
 
 public class ViewTransform {
-    private static final float FIXED_SCALE = 0.3f;
+    private float scaleFactor = 0.3f;
     private float translateX = 0f;
     private float translateY = 0f;
     private float lastTouchX = 0f;
     private float lastTouchY = 0f;
     private boolean isPanning = false;
     private OnTransformListener listener;
+    private float screenWidth = 0f;
+    private float screenHeight = 0f;
 
     public interface OnTransformListener {
         void onTransformChanged();
@@ -18,6 +20,31 @@ public class ViewTransform {
 
     public ViewTransform(Context context, OnTransformListener listener) {
         this.listener = listener;
+    }
+
+    public void setScreenSize(float width, float height) {
+        this.screenWidth = width;
+        this.screenHeight = height;
+    }
+
+    public void setScaleFactor(float scale) {
+        // Сохраняем центр экрана до изменения масштаба
+        float oldScale = this.scaleFactor;
+        float centerX = screenWidth / 2;
+        float centerY = screenHeight / 2;
+        
+        // Вычисляем позицию центра в мировых координатах до изменения масштаба
+        float worldCenterX = (centerX - translateX) / oldScale;
+        float worldCenterY = (centerY - translateY) / oldScale;
+        
+        // Устанавливаем новый масштаб
+        this.scaleFactor = scale;
+        
+        // Вычисляем новую позицию камеры, чтобы сохранить центр
+        translateX = centerX - (worldCenterX * scale);
+        translateY = centerY - (worldCenterY * scale);
+        
+        listener.onTransformChanged();
     }
 
     public void onTouchEvent(MotionEvent event) {
@@ -51,15 +78,15 @@ public class ViewTransform {
     }
 
     public float getScaleFactor() {
-        return FIXED_SCALE;
+        return scaleFactor;
     }
 
     public float getFocusX() {
-        return 0f;
+        return screenWidth / 2;
     }
 
     public float getFocusY() {
-        return 0f;
+        return screenHeight / 2;
     }
 
     public float getTranslateX() {

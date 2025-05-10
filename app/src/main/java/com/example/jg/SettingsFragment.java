@@ -13,7 +13,11 @@ import androidx.fragment.app.Fragment;
 public class SettingsFragment extends Fragment {
     private static final String PREFS_NAME = "GameSettings";
     private static final String WORLD_SIZE_KEY = "worldSize";
+    private static final String DIFFICULTY_KEY = "difficulty";
     
+    private Button difficultyButton;
+    private int currentDifficulty = 1;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
@@ -50,6 +54,30 @@ public class SettingsFragment extends Fragment {
             getActivity().getSupportFragmentManager().popBackStack();
         });
         
+        // Загружаем сохраненную сложность
+        currentDifficulty = settings.getInt(DIFFICULTY_KEY, 1);
+        
+        difficultyButton = view.findViewById(R.id.difficultyButton);
+        updateDifficultyButtonText();
+        
+        difficultyButton.setOnClickListener(v -> {
+            currentDifficulty = currentDifficulty % 3 + 1;
+            updateDifficultyButtonText();
+            
+            // Сохраняем сложность
+            SharedPreferences.Editor editor = settings.edit();
+            editor.putInt(DIFFICULTY_KEY, currentDifficulty);
+            editor.apply();
+        });
+        
         return view;
+    }
+
+    private void updateDifficultyButtonText() {
+        difficultyButton.setText("Сложность: " + currentDifficulty);
+    }
+
+    public int getDifficulty() {
+        return currentDifficulty;
     }
 } 

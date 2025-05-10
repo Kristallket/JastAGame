@@ -10,8 +10,7 @@ public class MenuActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_menu);
-        
-        // Load the initial fragment if this is the first creation
+
         if (savedInstanceState == null) {
             loadFragment(new MainMenuFragment());
         }
