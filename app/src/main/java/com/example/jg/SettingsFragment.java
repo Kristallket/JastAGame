@@ -141,7 +141,6 @@ public class SettingsFragment extends Fragment {
         editor.putString(PURCHASED_ITEMS_KEY, ""); // Сбрасываем список купленных предметов
         editor.apply();
         
-        updateTotalScore(0);
-        updateMaxScore(0);
+        updateTotalScore(getContext(), 0);
     }
 } 
