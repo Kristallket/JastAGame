@@ -51,6 +51,7 @@ public class ShopFragment extends Fragment implements ShopAdapter.OnItemClickLis
         addShopItem(R.drawable.box, "Улучшенная коробка", 100, SettingsFragment.BOX_UPGRADE_ID);
         addShopItem(R.drawable.box, "Золотая коробка", 500, SettingsFragment.GOLD_BOX_ID);
         addShopItem(R.drawable.box, "Алмазная коробка", 1000, SettingsFragment.DIAMOND_BOX_ID);
+        addShopItem(R.drawable.planks, "Доски", 350, SettingsFragment.PLANKS_ID);
     }
 
     public void addShopItem(int imageResourceId, String name, int price, String itemId) {

@@ -20,10 +20,15 @@ import java.util.ArrayList;
 import java.util.Random;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.ViewGroup;
+import android.view.Gravity;
+import android.widget.FrameLayout;
+import com.google.android.material.button.MaterialButton;
 
 public class SpriteView extends View implements ViewTransform.OnTransformListener {
     private Bitmap spriteSheet;
     private Bitmap boxImage;
+    private Bitmap planksImage;
     private int spriteWidth;
     private int spriteHeight;
     private int currentFrame = 0;
@@ -40,9 +45,12 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
     private BackgroundRenderer backgroundRenderer;
     private ViewTransform viewTransform;
     private ArrayList<Box> boxes;
+    private ArrayList<Planks> planks;
     private int score = 0;
     private Paint scorePaint;
     private Random random;
+    private boolean isPlacingPlanks = false;
+    private MaterialButton planksButton;
     
     // Скорость персонажа в пикселях
     private static final float CHARACTER_SPEED = 300f;
@@ -95,6 +103,19 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
                 invalidate();
             }
         }
+
+        // Проверяем столкновения с досками
+        for (Planks plank : planks) {
+            if (plank.isColliding(currentX, currentY, spriteWidth, spriteHeight)) {
+                // Если столкнулись с построенной доской, отменяем движение
+                if (plank.isBuilt()) {
+                    currentX = targetX;
+                    currentY = targetY;
+                    stopMovement();
+                }
+                invalidate();
+            }
+        }
     }
 
     private void setupAnimations() {
@@ -114,9 +135,22 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
                 currentY = targetY;
                 stopMovement();
             } else {
+                // Сохраняем старые координаты
+                float oldX = currentX;
+                float oldY = currentY;
+                
+                // Пробуем обновить позицию
                 currentX = newX;
                 currentY = newY;
+                
+                // Проверяем столкновения
                 checkBoxCollisions();
+                
+                // Если произошло столкновение с построенной доской, возвращаем старую позицию
+                if (currentX == targetX && currentY == targetY) {
+                    currentX = oldX;
+                    currentY = oldY;
+                }
             }
             invalidate();
         });
@@ -197,6 +231,52 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
     }
 
     @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        setupPlanksButton();
+    }
+
+    private void setupPlanksButton() {
+        if (getContext() instanceof Activity && planksButton == null) {
+            Activity activity = (Activity) getContext();
+            planksButton = new MaterialButton(activity);
+            planksButton.setIcon(getResources().getDrawable(R.drawable.planks));
+            planksButton.setIconGravity(MaterialButton.ICON_GRAVITY_START);
+            planksButton.setIconPadding(8);
+            planksButton.setIconSize(48);
+            planksButton.setIconTint(null);
+            planksButton.setBackgroundTintList(getResources().getColorStateList(R.color.button_background));
+            planksButton.setCornerRadius(8);
+            planksButton.setPadding(16, 16, 16, 16);
+            
+            // Добавляем кнопку в родительский контейнер SpriteView
+            ViewGroup parent = (ViewGroup) getParent();
+            if (parent != null) {
+                FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+                params.gravity = Gravity.BOTTOM | Gravity.START;
+                params.setMargins(16, 0, 0, 96);
+                parent.addView(planksButton, params);
+                
+                // Проверяем, куплены ли доски
+                if (ShopFragment.isItemPurchased(getContext(), SettingsFragment.PLANKS_ID)) {
+                    planksButton.setVisibility(View.VISIBLE);
+                    planksButton.setOnClickListener(v -> {
+                        isPlacingPlanks = !isPlacingPlanks;
+                        planksButton.setBackgroundTintList(getResources().getColorStateList(
+                            isPlacingPlanks ? R.color.button_background_pressed : R.color.button_background
+                        ));
+                    });
+                } else {
+                    planksButton.setVisibility(View.GONE);
+                }
+            }
+        }
+    }
+
+    @Override
     public boolean onTouchEvent(MotionEvent event) {
         viewTransform.onTouchEvent(event);
         
@@ -215,6 +295,19 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
 
             float worldX = (touchX - translateX - focusX) / scale + focusX;
             float worldY = (touchY - translateY - focusY) / scale + focusY;
+
+            if (isPlacingPlanks) {
+                // Размещаем доски
+                planks.add(new Planks(
+                    worldX - planksImage.getWidth() / 2,
+                    worldY - planksImage.getHeight() / 2,
+                    planksImage
+                ));
+                isPlacingPlanks = false;
+                planksButton.setBackgroundTintList(getResources().getColorStateList(R.color.button_background));
+                invalidate();
+                return true;
+            }
 
             float charCenterX = currentX + spriteWidth / 2;
             float charCenterY = currentY + spriteHeight / 2;
@@ -261,6 +354,11 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         canvas.scale(scale, scale, focusX, focusY);
         
         backgroundRenderer.draw(canvas, worldWidth, worldHeight);
+        
+        // Рисуем доски
+        for (Planks plank : planks) {
+            plank.draw(canvas);
+        }
         
         for (Box box : boxes) {
             box.draw(canvas);
@@ -364,8 +462,14 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         if (boxImage != null) {
             boxImage.recycle();
         }
+        if (planksImage != null) {
+            planksImage.recycle();
+        }
         if (backgroundRenderer != null) {
             backgroundRenderer.cleanup();
+        }
+        if (planksButton != null) {
+            ((ViewGroup) planksButton.getParent()).removeView(planksButton);
         }
     }
 
@@ -377,9 +481,14 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
     private void init() {
         spriteSheet = BitmapFactory.decodeResource(getResources(), R.drawable.sprites);
         boxImage = BitmapFactory.decodeResource(getResources(), R.drawable.box);
+        planksImage = BitmapFactory.decodeResource(getResources(), R.drawable.planks);
         boxImage = Bitmap.createScaledBitmap(boxImage, 
             boxImage.getWidth() / 4, 
             boxImage.getHeight() / 4, 
+            true);
+        planksImage = Bitmap.createScaledBitmap(planksImage,
+            planksImage.getWidth() / 4,
+            planksImage.getHeight() / 4,
             true);
         spriteWidth = spriteSheet.getWidth() / 3;
         spriteHeight = spriteSheet.getHeight() / 3;
@@ -389,6 +498,7 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         transformMatrix = new Matrix();
         random = new Random();
         boxes = new ArrayList<>();
+        planks = new ArrayList<>();
         
         scorePaint = new Paint();
         scorePaint.setColor(0xFFFFFFFF);

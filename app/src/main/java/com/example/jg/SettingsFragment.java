@@ -25,6 +25,7 @@ public class SettingsFragment extends Fragment {
     public static final String BOX_UPGRADE_ID = "box_upgrade";
     public static final String GOLD_BOX_ID = "gold_box";
     public static final String DIAMOND_BOX_ID = "diamond_box";
+    public static final String PLANKS_ID = "planks";
     
     private Button difficultyButton;
     private int currentDifficulty = 1;

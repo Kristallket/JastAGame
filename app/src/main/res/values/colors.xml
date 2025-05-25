@@ -10,5 +10,6 @@
     
     <!-- Цвета для кнопок -->
     <color name="button_background">#FF6200EE</color>
+    <color name="button_background_pressed">#FF3700B3</color>
     <color name="button_text">#FFFFFFFF</color>
 </resources>
