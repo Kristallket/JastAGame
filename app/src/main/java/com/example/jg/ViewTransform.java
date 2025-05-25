@@ -2,118 +2,157 @@ package com.example.jg;
 
 import android.content.Context;
 import android.view.MotionEvent;
+import android.util.DisplayMetrics;
 
+/**
+ * Класс ViewTransform отвечает за трансформацию игрового вида.
+ * Позволяет масштабировать и перемещать игровой мир.
+ */
 public class ViewTransform {
-    private float scaleFactor = 0.3f;
-    private float translateX = 0f;
-    private float translateY = 0f;
-    private float lastTouchX = 0f;
-    private float lastTouchY = 0f;
-    private boolean isPanning = false;
-    private OnTransformListener listener;
-    private float screenWidth = 0f;
-    private float screenHeight = 0f;
+    private float scaleFactor = 1.0f;    // Масштаб отображения
+    private float translateX = 0f;       // Смещение по X
+    private float translateY = 0f;       // Смещение по Y
+    private float focusX = 0f;           // Точка фокуса X
+    private float focusY = 0f;           // Точка фокуса Y
+    private float screenWidth;           // Ширина экрана
+    private float screenHeight;          // Высота экрана
+    private boolean isScaling = false;   // Флаг масштабирования
+    private OnTransformListener listener;// Слушатель изменений трансформации
 
+    /**
+     * Интерфейс для отслеживания изменений трансформации
+     */
     public interface OnTransformListener {
         void onTransformChanged();
     }
 
+    /**
+     * Конструктор
+     * @param context Контекст приложения
+     * @param listener Слушатель изменений трансформации
+     */
     public ViewTransform(Context context, OnTransformListener listener) {
         this.listener = listener;
+        DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+        screenWidth = metrics.widthPixels;
+        screenHeight = metrics.heightPixels;
     }
 
+    /**
+     * Устанавливает размеры экрана
+     */
     public void setScreenSize(float width, float height) {
-        this.screenWidth = width;
-        this.screenHeight = height;
+        screenWidth = width;
+        screenHeight = height;
     }
 
+    /**
+     * Устанавливает масштаб отображения
+     */
     public void setScaleFactor(float scale) {
-        // Сохраняем центр экрана до изменения масштаба
-        float oldScale = this.scaleFactor;
-        float centerX = screenWidth / 2;
-        float centerY = screenHeight / 2;
-        
-        // Вычисляем позицию центра в мировых координатах до изменения масштаба
-        float worldCenterX = (centerX - translateX) / oldScale;
-        float worldCenterY = (centerY - translateY) / oldScale;
-        
-        // Устанавливаем новый масштаб
-        this.scaleFactor = scale;
-        
-        // Вычисляем новую позицию камеры, чтобы сохранить центр
-        translateX = centerX - (worldCenterX * scale);
-        translateY = centerY - (worldCenterY * scale);
-        
-        listener.onTransformChanged();
-    }
-
-    public void onTouchEvent(MotionEvent event) {
-        switch (event.getAction() & MotionEvent.ACTION_MASK) {
-            case MotionEvent.ACTION_DOWN:
-                isPanning = true;
-                lastTouchX = event.getX();
-                lastTouchY = event.getY();
-                break;
-                
-            case MotionEvent.ACTION_MOVE:
-                if (isPanning) {
-                    float dx = event.getX() - lastTouchX;
-                    float dy = event.getY() - lastTouchY;
-                    
-                    translateX += dx;
-                    translateY += dy;
-                    
-                    lastTouchX = event.getX();
-                    lastTouchY = event.getY();
-                    
-                    listener.onTransformChanged();
-                }
-                break;
-                
-            case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_CANCEL:
-                isPanning = false;
-                break;
+        scaleFactor = scale;
+        if (listener != null) {
+            listener.onTransformChanged();
         }
     }
 
+    /**
+     * Возвращает текущий масштаб
+     */
     public float getScaleFactor() {
         return scaleFactor;
     }
 
-    public float getFocusX() {
-        return screenWidth / 2;
-    }
-
-    public float getFocusY() {
-        return screenHeight / 2;
-    }
-
+    /**
+     * Возвращает смещение по X
+     */
     public float getTranslateX() {
         return translateX;
     }
 
+    /**
+     * Возвращает смещение по Y
+     */
     public float getTranslateY() {
         return translateY;
     }
 
-    public boolean isPanning() {
-        return isPanning;
+    /**
+     * Возвращает точку фокуса X
+     */
+    public float getFocusX() {
+        return focusX;
     }
 
+    /**
+     * Возвращает точку фокуса Y
+     */
+    public float getFocusY() {
+        return focusY;
+    }
+
+    /**
+     * Проверяет, происходит ли масштабирование
+     */
     public boolean isScaling() {
-        return false;
+        return isScaling;
     }
 
-    public void reset() {
-        translateX = 0f;
-        translateY = 0f;
-        listener.onTransformChanged();
-    }
-
+    /**
+     * Центрирует вид на указанных координатах
+     */
     public void centerOn(float x, float y) {
         translateX = x;
         translateY = y;
-        listener.onTransformChanged();
+        if (listener != null) {
+            listener.onTransformChanged();
+        }
+    }
+
+    /**
+     * Обрабатывает события касания для масштабирования и перемещения
+     */
+    public void onTouchEvent(MotionEvent event) {
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                if (event.getPointerCount() == 2) {
+                    isScaling = true;
+                    focusX = (event.getX(0) + event.getX(1)) / 2;
+                    focusY = (event.getY(0) + event.getY(1)) / 2;
+                }
+                break;
+
+            case MotionEvent.ACTION_MOVE:
+                if (event.getPointerCount() == 2) {
+                    float oldDist = getDistance(event, 0, 1);
+                    float newDist = getDistance(event, 0, 1);
+                    float scale = newDist / oldDist;
+                    scaleFactor *= scale;
+                    
+                    // Ограничиваем масштаб
+                    scaleFactor = Math.max(0.5f, Math.min(scaleFactor, 2.0f));
+                    
+                    if (listener != null) {
+                        listener.onTransformChanged();
+                    }
+                }
+                break;
+
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_POINTER_UP:
+                if (event.getPointerCount() < 2) {
+                    isScaling = false;
+                }
+                break;
+        }
+    }
+
+    /**
+     * Вычисляет расстояние между двумя точками касания
+     */
+    private float getDistance(MotionEvent event, int index1, int index2) {
+        float dx = event.getX(index1) - event.getX(index2);
+        float dy = event.getY(index1) - event.getY(index2);
+        return (float) Math.sqrt(dx * dx + dy * dy);
     }
 } 

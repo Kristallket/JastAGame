@@ -4,15 +4,27 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 
+/**
+ * Класс Planks представляет собой игровой объект "доски".
+ * Доски могут находиться в двух состояниях:
+ * 1. Полупрозрачные (не построенные) - для разметки
+ * 2. Непрозрачные (построенные) - как препятствие
+ */
 public class Planks {
-    private float x;
-    private float y;
-    private Bitmap image;
-    private int width;
-    private int height;
-    private boolean isBuilt;
-    private Paint paint;
+    private float x;          // X-координата доски
+    private float y;          // Y-координата доски
+    private Bitmap image;     // Изображение доски
+    private int width;        // Ширина доски
+    private int height;       // Высота доски
+    private boolean isBuilt;  // Флаг построения доски
+    private Paint paint;      // Кисть для отрисовки
 
+    /**
+     * Конструктор создает новую доску
+     * @param x X-координата
+     * @param y Y-координата
+     * @param image Изображение доски
+     */
     public Planks(float x, float y, Bitmap image) {
         this.x = x;
         this.y = y;
@@ -21,53 +33,76 @@ public class Planks {
         this.height = image.getHeight();
         this.isBuilt = false;
         
-        paint = new Paint();
-        paint.setAlpha(128); // Полупрозрачность для разметки
+        // Настраиваем кисть для отрисовки
+        this.paint = new Paint();
+        paint.setAlpha(128); // Полупрозрачность для непостроенной доски
     }
 
+    /**
+     * Отрисовывает доску на канвасе
+     * @param canvas Канвас для отрисовки
+     */
     public void draw(Canvas canvas) {
-        if (!isBuilt) {
-            canvas.drawBitmap(image, x, y, paint);
-        } else {
-            canvas.drawBitmap(image, x, y, null);
+        if (isBuilt) {
+            paint.setAlpha(255); // Полная непрозрачность для построенной доски
         }
+        canvas.drawBitmap(image, x, y, paint);
     }
 
-    public boolean isColliding(float charX, float charY, int charWidth, int charHeight) {
-        // Проверяем столкновение в любом случае
-        boolean collision = !(charX + charWidth < x ||
+    /**
+     * Проверяет столкновение с персонажем
+     * @param charX X-координата персонажа
+     * @param charY Y-координата персонажа
+     * @param charWidth Ширина персонажа
+     * @param charHeight Высота персонажа
+     * @return true если произошло столкновение
+     */
+    public boolean isColliding(float charX, float charY, float charWidth, float charHeight) {
+        return !(charX + charWidth < x ||
                 charX > x + width ||
                 charY + charHeight < y ||
                 charY > y + height);
-        
-        // Возвращаем true только для построенных досок
-        return collision && isBuilt;
     }
 
+    /**
+     * Строит доску (делает её непрозрачной)
+     */
     public void build() {
         isBuilt = true;
+        paint.setAlpha(255);
     }
 
-    public void reset() {
-        isBuilt = false;
-    }
-
+    /**
+     * Возвращает X-координату доски
+     */
     public float getX() {
         return x;
     }
 
+    /**
+     * Возвращает Y-координату доски
+     */
     public float getY() {
         return y;
     }
 
+    /**
+     * Возвращает ширину доски
+     */
     public int getWidth() {
         return width;
     }
 
+    /**
+     * Возвращает высоту доски
+     */
     public int getHeight() {
         return height;
     }
 
+    /**
+     * Проверяет, построена ли доска
+     */
     public boolean isBuilt() {
         return isBuilt;
     }

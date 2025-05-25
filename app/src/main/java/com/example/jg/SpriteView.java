@@ -26,63 +26,87 @@ import android.widget.FrameLayout;
 import com.google.android.material.button.MaterialButton;
 import android.widget.TextView;
 
+/**
+ * SpriteView - основной класс для отображения и управления игровым процессом.
+ * Отвечает за:
+ * - Отрисовку персонажа и игрового мира
+ * - Обработку столкновений
+ * - Управление движением персонажа
+ * - Взаимодействие с досками и коробками
+ * - Отображение счета
+ */
 public class SpriteView extends View implements ViewTransform.OnTransformListener {
-    private Bitmap spriteSheet;
-    private Bitmap boxImage;
-    private Bitmap planksImage;
-    private int spriteWidth;
-    private int spriteHeight;
-    private int currentFrame = 0;
-    private int totalFrames = 9; // 3x3 sprite sheet
-    private float currentX = 0;
-    private float currentY = 0;
-    private float targetX = 0;
-    private float targetY = 0;
-    private boolean isMoving = false;
-    private boolean isFacingRight = true;
-    private ValueAnimator moveAnimator;
-    private ValueAnimator frameAnimator;
-    private Matrix transformMatrix;
-    private BackgroundRenderer backgroundRenderer;
-    private ViewTransform viewTransform;
-    private ArrayList<Box> boxes;
-    private ArrayList<Planks> planks;
-    private int score = 0;
-    private Paint scorePaint;
-    private Random random;
-    private boolean isPlacingPlanks = false;
-    private MaterialButton planksButton;
-    private TextView modeTextView;
-    private boolean isMarkingOnlyMode = false;
-    
-    // Скорость персонажа в пикселях
-    private static final float CHARACTER_SPEED = 300f;
-    private static final float DASH_SPEED = 600f; // 3x
-    private static final float MOVEMENT_THRESHOLD = 1f;
-    private static final long DASH_COOLDOWN = 2000; // 2 s
-    private static final float SWIPE_THRESHOLD = 100f; // Минимальное расстояние для свайпа
+    // Изображения и размеры
+    private Bitmap spriteSheet;      // Спрайт-лист персонажа
+    private Bitmap boxImage;         // Изображение коробки
+    private Bitmap planksImage;      // Изображение доски
+    private int spriteWidth;         // Ширина спрайта персонажа
+    private int spriteHeight;        // Высота спрайта персонажа
+    private int currentFrame = 0;    // Текущий кадр анимации
+    private int totalFrames = 9;     // Общее количество кадров (3x3 спрайт-лист)
 
-    private static final int DEFAULT_WORLD_SIZE = 9;
-    private float worldWidth;
-    private float worldHeight;
-    private float screenWidth;
-    private float screenHeight;
-    
-    // Перезарядка деша
-    private long lastDashTime = 0;
-    private boolean canDash = true;
-    private int touchCount = 0;
-    private float lastTouchX = 0f;
-    private float lastTouchY = 0f;
+    // Позиция и движение
+    private float currentX = 0;      // Текущая X-координата персонажа
+    private float currentY = 0;      // Текущая Y-координата персонажа
+    private float targetX = 0;       // Целевая X-координата для движения
+    private float targetY = 0;       // Целевая Y-координата для движения
+    private boolean isMoving = false;// Флаг движения персонажа
+    private boolean isFacingRight = true; // Направление персонажа
 
-    private SettingsFragment settingsFragment;
+    // Анимации
+    private ValueAnimator moveAnimator;   // Аниматор движения
+    private ValueAnimator frameAnimator;  // Аниматор кадров
+    private Matrix transformMatrix;       // Матрица для отражения спрайта
 
-    private float initialScale = 1.0f;
+    // Игровые объекты
+    private BackgroundRenderer backgroundRenderer; // Рендерер фона
+    private ViewTransform viewTransform;          // Трансформация вида
+    private ArrayList<Box> boxes;                 // Список коробок
+    private ArrayList<Planks> planks;            // Список досок
+    private int score = 0;                       // Счет игрока
+    private Paint scorePaint;                    // Кисть для отрисовки счета
+    private Random random;                       // Генератор случайных чисел
 
+    // Механика досок
+    private boolean isPlacingPlanks = false;     // Флаг размещения досок
+    private MaterialButton planksButton;         // Кнопка размещения досок
+    private TextView modeTextView;               // Текст режима
+    private boolean isMarkingOnlyMode = false;   // Флаг режима только разметки
+
+    // Константы движения
+    private static final float CHARACTER_SPEED = 300f;    // Скорость персонажа
+    private static final float DASH_SPEED = 600f;         // Скорость рывка (3x)
+    private static final float MOVEMENT_THRESHOLD = 1f;   // Порог остановки движения
+    private static final long DASH_COOLDOWN = 2000;       // Перезарядка рывка (2 сек)
+    private static final float SWIPE_THRESHOLD = 100f;    // Порог для свайпа
+
+    // Размеры мира
+    private static final int DEFAULT_WORLD_SIZE = 9;      // Размер мира по умолчанию
+    private float worldWidth;                             // Ширина игрового мира
+    private float worldHeight;                            // Высота игрового мира
+    private float screenWidth;                            // Ширина экрана
+    private float screenHeight;                           // Высота экрана
+
+    // Механика рывка
+    private long lastDashTime = 0;                        // Время последнего рывка
+    private boolean canDash = true;                       // Возможность рывка
+    private int touchCount = 0;                           // Счетчик касаний
+    private float lastTouchX = 0f;                        // Последняя X-координата касания
+    private float lastTouchY = 0f;                        // Последняя Y-координата касания
+
+    private SettingsFragment settingsFragment;            // Фрагмент настроек
+    private float initialScale = 1.0f;                    // Начальный масштаб
+
+    /**
+     * Устанавливает фрагмент настроек для доступа к игровым настройкам
+     */
     public void setSettingsFragment(SettingsFragment fragment) {
         this.settingsFragment = fragment;
     }
 
+    /**
+     * Устанавливает начальный масштаб отображения
+     */
     public void setInitialScale(float scale) {
         this.initialScale = scale;
         if (viewTransform != null) {
@@ -91,27 +115,23 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         }
     }
 
+    /**
+     * Создает новую коробку в случайной позиции игрового мира
+     */
     private void spawnNewBox() {
         float x = random.nextFloat() * (worldWidth - boxImage.getWidth());
         float y = random.nextFloat() * (worldHeight - boxImage.getHeight());
         boxes.add(new Box(x, y, boxImage));
     }
 
-    private boolean willCollideWithPlank(float newX, float newY) {
-        for (Planks plank : planks) {
-            if (plank.isBuilt()) {
-                if (!(newX + spriteWidth < plank.getX() ||
-                    newX > plank.getX() + plank.getWidth() ||
-                    newY + spriteHeight < plank.getY() ||
-                    newY > plank.getY() + plank.getHeight())) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
+    /**
+     * Проверяет столкновения с коробками и досками
+     * - Собирает коробки при столкновении
+     * - Обрабатывает столкновения с досками
+     * - Строит доски в обычном режиме
+     */
     private void checkBoxCollisions() {
+        // Проверка столкновений с коробками
         ArrayList<Box> boxesCopy = new ArrayList<>(boxes);
         for (Box box : boxesCopy) {
             if (!box.isCollected() && box.isColliding(currentX, currentY, spriteWidth, spriteHeight)) {
@@ -124,17 +144,17 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
             }
         }
 
-        // Проверяем столкновения с досками
+        // Проверка столкновений с досками
         for (Planks plank : planks) {
             if (plank.isBuilt()) {
-                // Проверяем столкновение с доской (обычный хитбокс)
+                // Проверяем столкновение с построенной доской (обычный хитбокс)
                 boolean isColliding = !(currentX + spriteWidth < plank.getX() ||
                         currentX > plank.getX() + plank.getWidth() ||
                         currentY + spriteHeight < plank.getY() ||
                         currentY > plank.getY() + plank.getHeight());
 
                 if (isColliding) {
-                    // Останавливаем движение
+                    // Останавливаем движение при столкновении
                     if (moveAnimator != null && moveAnimator.isRunning()) {
                         moveAnimator.cancel();
                     }
@@ -172,7 +192,11 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         }
     }
 
+    /**
+     * Настраивает анимации движения и кадров
+     */
     private void setupAnimations() {
+        // Аниматор движения
         moveAnimator = ValueAnimator.ofFloat(0f, 1f);
         moveAnimator.setInterpolator(new LinearInterpolator());
         moveAnimator.addUpdateListener(animation -> {
@@ -209,6 +233,7 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
             invalidate();
         });
 
+        // Аниматор кадров
         frameAnimator = ValueAnimator.ofInt(1, totalFrames - 1);
         frameAnimator.setDuration(500);
         frameAnimator.setRepeatCount(ValueAnimator.INFINITE);
@@ -218,6 +243,9 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         });
     }
 
+    /**
+     * Останавливает движение персонажа
+     */
     private void stopMovement() {
         isMoving = false;
         touchCount = 0;
@@ -231,6 +259,9 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         invalidate();
     }
 
+    /**
+     * Начинает движение персонажа к целевой точке
+     */
     private void startMovement() {
         if (isMoving) {
             if (touchCount == 1) {
@@ -284,12 +315,9 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         moveAnimator.start();
     }
 
-    @Override
-    protected void onAttachedToWindow() {
-        super.onAttachedToWindow();
-        setupPlanksButton();
-    }
-
+    /**
+     * Настраивает кнопку размещения досок и текст режима
+     */
     private void setupPlanksButton() {
         if (getContext() instanceof Activity && planksButton == null) {
             Activity activity = (Activity) getContext();
@@ -301,6 +329,7 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
             modeTextView.setPadding(16, 0, 16, 8);
             updateModeText();
             
+            // Создаем кнопку размещения досок
             planksButton = new MaterialButton(activity);
             planksButton.setIcon(getResources().getDrawable(R.drawable.planks));
             planksButton.setIconGravity(MaterialButton.ICON_GRAVITY_START);
@@ -311,7 +340,7 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
             planksButton.setCornerRadius(8);
             planksButton.setPadding(16, 16, 16, 16);
             
-            // Добавляем кнопку и текст в родительский контейнер SpriteView
+            // Добавляем кнопку и текст в родительский контейнер
             ViewGroup parent = (ViewGroup) getParent();
             if (parent != null) {
                 // Добавляем TextView
@@ -320,7 +349,7 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 );
                 textParams.gravity = Gravity.BOTTOM | Gravity.START;
-                textParams.setMargins(16, 0, 0, 240); // Увеличиваем отступ снизу еще больше
+                textParams.setMargins(16, 0, 0, 240);
                 parent.addView(modeTextView, textParams);
                 
                 // Добавляем кнопку
@@ -350,12 +379,21 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         }
     }
 
+    /**
+     * Обновляет текст режима
+     */
     private void updateModeText() {
         if (modeTextView != null) {
             modeTextView.setText(isMarkingOnlyMode ? "Режим: Только разметка" : "Режим: Обычный");
         }
     }
 
+    /**
+     * Обрабатывает касания экрана
+     * - Обрабатывает жесты двумя пальцами для смены режима
+     * - Обрабатывает размещение досок
+     * - Обрабатывает движение персонажа
+     */
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getPointerCount() == 2) {
@@ -454,6 +492,9 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         return super.onTouchEvent(event);
     }
 
+    /**
+     * Отрисовывает игровой мир
+     */
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -478,10 +519,12 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
             plank.draw(canvas);
         }
         
+        // Рисуем коробки
         for (Box box : boxes) {
             box.draw(canvas);
         }
         
+        // Проверяем выход за границы мира
         if (currentX < 0 || currentX > worldWidth - spriteWidth ||
             currentY < 0 || currentY > worldHeight - spriteHeight) {
             if (getContext() instanceof Activity) {
@@ -490,6 +533,7 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
             return;
         }
 
+        // Рисуем персонажа
         int row = currentFrame / 3;
         int col = currentFrame % 3;
         Rect src = new Rect(
@@ -519,9 +563,13 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         canvas.restore();
         canvas.restore();
 
+        // Рисуем счет
         canvas.drawText("Score: " + score, 50, 50, scorePaint);
     }
 
+    /**
+     * Обрабатывает изменение размера view
+     */
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
@@ -550,6 +598,9 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         generateInitialBoxes();
     }
 
+    /**
+     * Генерирует начальные коробки
+     */
     private void generateInitialBoxes() {
         boxes.clear();
         SharedPreferences settings = getContext().getSharedPreferences("GameSettings", 0);
@@ -565,6 +616,9 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         invalidate();
     }
 
+    /**
+     * Очищает ресурсы при уничтожении view
+     */
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
@@ -594,15 +648,24 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         }
     }
 
+    /**
+     * Конструктор
+     */
     public SpriteView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
+    /**
+     * Инициализация view
+     */
     private void init() {
+        // Загружаем изображения
         spriteSheet = BitmapFactory.decodeResource(getResources(), R.drawable.sprites);
         boxImage = BitmapFactory.decodeResource(getResources(), R.drawable.box);
         planksImage = BitmapFactory.decodeResource(getResources(), R.drawable.planks);
+        
+        // Масштабируем изображения
         boxImage = Bitmap.createScaledBitmap(boxImage, 
             boxImage.getWidth() / 4, 
             boxImage.getHeight() / 4, 
@@ -616,6 +679,7 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
             spriteWidth, // Делаем квадратной
             true);
         
+        // Инициализируем игровые объекты
         backgroundRenderer = new BackgroundRenderer(getContext());
         viewTransform = new ViewTransform(getContext(), this);
         transformMatrix = new Matrix();
@@ -623,6 +687,7 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         boxes = new ArrayList<>();
         planks = new ArrayList<>();
         
+        // Настраиваем отображение счета
         scorePaint = new Paint();
         scorePaint.setColor(0xFFFFFFFF);
         scorePaint.setTextSize(75);
@@ -632,8 +697,25 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         setupAnimations();
     }
 
+    /**
+     * Обработчик изменения трансформации
+     */
     @Override
     public void onTransformChanged() {
         invalidate();
+    }
+
+    private boolean willCollideWithPlank(float newX, float newY) {
+        for (Planks plank : planks) {
+            if (plank.isBuilt()) {
+                if (!(newX + spriteWidth < plank.getX() ||
+                    newX > plank.getX() + plank.getWidth() ||
+                    newY + spriteHeight < plank.getY() ||
+                    newY > plank.getY() + plank.getHeight())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 } 
