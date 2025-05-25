@@ -40,17 +40,32 @@ public class Planks {
                 charY + charHeight < y ||
                 charY > y + height);
         
-        // Если есть столкновение и доска не построена, строим её
-        if (collision && !isBuilt) {
-            build();
-        }
-        
         // Возвращаем true только для построенных досок
         return collision && isBuilt;
     }
 
     public void build() {
         isBuilt = true;
+    }
+
+    public void reset() {
+        isBuilt = false;
+    }
+
+    public float getX() {
+        return x;
+    }
+
+    public float getY() {
+        return y;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
     }
 
     public boolean isBuilt() {
