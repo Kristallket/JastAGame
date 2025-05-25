@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import androidx.fragment.app.Fragment;
+import com.google.android.material.button.MaterialButton;
 
 public class MainMenuFragment extends Fragment {
     private TextView totalScoreText;
@@ -20,9 +21,10 @@ public class MainMenuFragment extends Fragment {
         totalScoreText = view.findViewById(R.id.totalScoreText);
         maxScoreText = view.findViewById(R.id.maxScoreText);
         
-        Button playButton = view.findViewById(R.id.playButton);
-        Button settingsButton = view.findViewById(R.id.settingsButton);
-        Button contactsButton = view.findViewById(R.id.contactsButton);
+        MaterialButton playButton = view.findViewById(R.id.playButton);
+        MaterialButton settingsButton = view.findViewById(R.id.settingsButton);
+        MaterialButton contactsButton = view.findViewById(R.id.contactsButton);
+        MaterialButton shopButton = view.findViewById(R.id.shopButton);
         
         updateCounters();
         
@@ -32,11 +34,24 @@ public class MainMenuFragment extends Fragment {
         });
         
         settingsButton.setOnClickListener(v -> {
-            ((MenuActivity) getActivity()).loadFragment(new SettingsFragment());
+            getActivity().getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragmentContainer, new SettingsFragment())
+                .addToBackStack(null)
+                .commit();
         });
         
         contactsButton.setOnClickListener(v -> {
-            ((MenuActivity) getActivity()).loadFragment(new ContactsFragment());
+            getActivity().getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragmentContainer, new ContactsFragment())
+                .addToBackStack(null)
+                .commit();
+        });
+        
+        shopButton.setOnClickListener(v -> {
+            getActivity().getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragmentContainer, new ShopFragment())
+                .addToBackStack(null)
+                .commit();
         });
         
         return view;

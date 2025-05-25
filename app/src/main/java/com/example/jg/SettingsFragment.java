@@ -19,6 +19,7 @@ public class SettingsFragment extends Fragment {
     private static final String TOTAL_SCORE_KEY = "totalScore";
     private static final String MAX_SCORE_KEY = "maxScore";
     private static final String CURRENT_SESSION_SCORE_KEY = "currentSessionScore";
+    private static final String PURCHASED_ITEMS_KEY = "purchasedItems";
     
     private Button difficultyButton;
     private int currentDifficulty = 1;
@@ -65,11 +66,7 @@ public class SettingsFragment extends Fragment {
                 .setTitle("Сброс прогресса")
                 .setMessage("Вы уверены, что хотите сбросить весь прогресс? Это действие нельзя отменить.")
                 .setPositiveButton("Да", (dialog, which) -> {
-                    SharedPreferences.Editor editor = settings.edit();
-                    editor.putInt(TOTAL_SCORE_KEY, 0);
-                    editor.putInt(MAX_SCORE_KEY, 0);
-                    editor.putInt(CURRENT_SESSION_SCORE_KEY, 0);
-                    editor.apply();
+                    resetProgress();
                 })
                 .setNegativeButton("Нет", null)
                 .show();
@@ -133,5 +130,18 @@ public class SettingsFragment extends Fragment {
     public static int getMaxScore(Context context) {
         SharedPreferences settings = context.getSharedPreferences(PREFS_NAME, 0);
         return settings.getInt(MAX_SCORE_KEY, 0);
+    }
+
+    private void resetProgress() {
+        SharedPreferences settings = getActivity().getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putInt(TOTAL_SCORE_KEY, 0);
+        editor.putInt(MAX_SCORE_KEY, 0);
+        editor.putInt(CURRENT_SESSION_SCORE_KEY, 0);
+        editor.putString(PURCHASED_ITEMS_KEY, ""); // Сбрасываем список купленных предметов
+        editor.apply();
+        
+        updateTotalScore(0);
+        updateMaxScore(0);
     }
 } 

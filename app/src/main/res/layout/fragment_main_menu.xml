@@ -44,6 +44,11 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/contactsButton"
         style="@style/GameButton"
-        android:text="Контакты"/>
+        android:text="@string/contacts"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/shopButton"
+        style="@style/GameButton"
+        android:text="@string/shop_title"/>
 
 </LinearLayout> 

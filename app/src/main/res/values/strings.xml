@@ -4,4 +4,7 @@
     <string name="total_score">Всего очков: %d</string>
     <string name="max_score">Максимум очков: %d</string>
     <string name="reset_progress">Сбросить прогресс</string>
+    <string name="shop_title">Магазин</string>
+    <string name="back">Назад</string>
+    <string name="contacts">Контакты</string>
 </resources>
