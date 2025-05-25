@@ -21,22 +21,27 @@
         android:layout_marginBottom="32dp"
         android:max="8" />
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/difficultyButton"
+        style="@style/GameButton"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="32dp"
         android:text="Сложность: 1" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/resetButton"
+        style="@style/GameButton"
+        android:layout_width="match_parent"
+        android:text="@string/reset_progress" />
 
     <Space
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/backButton"
+        style="@style/GameButton"
         android:layout_width="200dp"
-        android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:text="на главный экран" />
 

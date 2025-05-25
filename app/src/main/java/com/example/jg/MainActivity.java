@@ -26,6 +26,9 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
+        // Сбрасываем счет текущей сессии при запуске новой игры
+        SettingsFragment.resetSessionScore(this);
+
         spriteView = findViewById(R.id.spriteView);
         startScaleAnimation();
 

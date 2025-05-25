@@ -3,27 +3,47 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:gravity="center">
 
-    <Button
+    <TextView
+        android:id="@+id/gameTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/game_title"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="32dp"/>
+
+    <TextView
+        android:id="@+id/totalScoreText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/total_score"
+        android:textSize="18sp"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:id="@+id/maxScoreText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/max_score"
+        android:textSize="18sp"
+        android:layout_marginBottom="32dp"/>
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/playButton"
-        android:layout_width="346dp"
-        android:layout_height="61dp"
-        android:layout_marginBottom="16dp"
-        android:text="Play" />
+        style="@style/GameButton"
+        android:text="Играть"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/settingsButton"
-        android:layout_width="253dp"
-        android:layout_height="62dp"
-        android:layout_marginBottom="16dp"
-        android:text="Settings" />
+        style="@style/GameButton"
+        android:text="Настройки"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/contactsButton"
-        android:layout_width="213dp"
-        android:layout_height="66dp"
-        android:text="Contacts" />
+        style="@style/GameButton"
+        android:text="Контакты"/>
 
 </LinearLayout> 

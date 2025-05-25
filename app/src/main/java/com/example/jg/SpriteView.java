@@ -63,8 +63,18 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
 
     private SettingsFragment settingsFragment;
 
+    private float initialScale = 1.0f;
+
     public void setSettingsFragment(SettingsFragment fragment) {
         this.settingsFragment = fragment;
+    }
+
+    public void setInitialScale(float scale) {
+        this.initialScale = scale;
+        if (viewTransform != null) {
+            viewTransform.setScaleFactor(scale);
+            invalidate();
+        }
     }
 
     private void spawnNewBox() {
@@ -79,6 +89,7 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
             if (!box.isCollected() && box.isColliding(currentX, currentY, spriteWidth, spriteHeight)) {
                 box.collect();
                 score += 10;
+                SettingsFragment.updateTotalScore(getContext(), 10);
                 spawnNewBox();
                 invalidate();
             }
@@ -312,6 +323,7 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         targetY = currentY;
         
         viewTransform.setScreenSize(w, h);
+        viewTransform.setScaleFactor(initialScale);
         
         float scale = viewTransform.getScaleFactor();
         float centerX = (screenWidth / 2) - (currentX * scale);
