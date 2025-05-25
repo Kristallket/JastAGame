@@ -21,6 +21,11 @@ public class SettingsFragment extends Fragment {
     private static final String CURRENT_SESSION_SCORE_KEY = "currentSessionScore";
     private static final String PURCHASED_ITEMS_KEY = "purchasedItems";
     
+    // ID предметов магазина
+    public static final String BOX_UPGRADE_ID = "box_upgrade";
+    public static final String GOLD_BOX_ID = "gold_box";
+    public static final String DIAMOND_BOX_ID = "diamond_box";
+    
     private Button difficultyButton;
     private int currentDifficulty = 1;
 
@@ -130,6 +135,21 @@ public class SettingsFragment extends Fragment {
     public static int getMaxScore(Context context) {
         SharedPreferences settings = context.getSharedPreferences(PREFS_NAME, 0);
         return settings.getInt(MAX_SCORE_KEY, 0);
+    }
+
+    public static int getBoxScore(Context context) {
+        SharedPreferences settings = context.getSharedPreferences(PREFS_NAME, 0);
+        String purchasedItems = settings.getString(PURCHASED_ITEMS_KEY, "");
+        
+        if (purchasedItems.contains(DIAMOND_BOX_ID)) {
+            return 25;
+        } else if (purchasedItems.contains(GOLD_BOX_ID)) {
+            return 20;
+        } else if (purchasedItems.contains(BOX_UPGRADE_ID)) {
+            return 15;
+        } else {
+            return 10;
+        }
     }
 
     private void resetProgress() {

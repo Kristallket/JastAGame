@@ -88,8 +88,9 @@ public class SpriteView extends View implements ViewTransform.OnTransformListene
         for (Box box : boxesCopy) {
             if (!box.isCollected() && box.isColliding(currentX, currentY, spriteWidth, spriteHeight)) {
                 box.collect();
-                score += 10;
-                SettingsFragment.updateTotalScore(getContext(), 10);
+                int boxScore = SettingsFragment.getBoxScore(getContext());
+                score += boxScore;
+                SettingsFragment.updateTotalScore(getContext(), boxScore);
                 spawnNewBox();
                 invalidate();
             }
